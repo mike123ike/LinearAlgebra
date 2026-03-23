@@ -1,4 +1,4 @@
-package com.mike123ike.LinearAlgebra;
+package com.mike123ike.linalg;
 
 public class Vector implements VectorSpace {
     private final double[] vector;

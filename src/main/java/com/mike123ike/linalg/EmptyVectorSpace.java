@@ -1,4 +1,4 @@
-package com.mike123ike.LinearAlgebra;
+package com.mike123ike.linalg;
 
 public class EmptyVectorSpace implements VectorSpace {
     public static final EmptyVectorSpace EMPTY_VECTOR_SPACE = new EmptyVectorSpace();

@@ -1,4 +1,4 @@
-package com.mike123ike.LinearAlgebra;
+package com.mike123ike.linalg;
 
 public class ParameterizedVector implements VectorSpace {
     private final Vector translation;

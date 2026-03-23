@@ -1,4 +1,4 @@
-import com.mike123ike.LinearAlgebra.*;
+import com.mike123ike.linalg.*;
 
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;

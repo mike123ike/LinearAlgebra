@@ -1,4 +1,4 @@
-import com.mike123ike.LinearAlgebra.Matrix;
+import com.mike123ike.linalg.Matrix;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
