@@ -5,7 +5,6 @@
 *.ear
 
 ### IntelliJ IDEA ###
-.idea/
 target/
 
 ### Eclipse ###
