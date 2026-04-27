@@ -1,6 +1,6 @@
 package com.mike123ike.linalg;
 
-public class LUDecomposition {
+public class LUDecomposition implements Decomposition{
     private final Matrix L;
     private final Matrix U;
     private final int[] pivots;
@@ -61,7 +61,7 @@ public class LUDecomposition {
         for (int i = 0; i < min; i++) {
             L.set(i, i, 1);
         }
-        U = new Matrix(min, M.columns());
+        U = new Matrix(min, M.cols);
         for (int i = 0; i < min; i++) {
             U.setRow(tempU, i);
         }
@@ -164,8 +164,8 @@ public class LUDecomposition {
     public int hashCode() {
         int result = L.hashCode();
         result = 31 * result + U.hashCode();
-        for (int i = 0; i < pivots.length; i++) {
-            result = 31 * result + Integer.hashCode(pivots[i]);
+        for (int pivot : pivots) {
+            result = 31 * result + Integer.hashCode(pivot);
         }
         result = 31 * result + sign;
         return result;

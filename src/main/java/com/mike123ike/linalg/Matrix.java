@@ -553,6 +553,10 @@ public class Matrix {
         return new LUDecomposition(M);
     }
 
+    public static QRDecomposition decomposeQR(Matrix M) {
+        return new QRDecomposition(M);
+    }
+
 
     // Instance operations
     public Matrix add(Matrix other) {
@@ -617,6 +621,10 @@ public class Matrix {
 
     public LUDecomposition decomposeLU() {
         return decomposeLU(this);
+    }
+
+    public QRDecomposition decomposeQR() {
+        return decomposeQR(this);
     }
 
     public boolean equals(Object o) {

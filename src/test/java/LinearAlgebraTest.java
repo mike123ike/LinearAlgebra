@@ -914,4 +914,323 @@ public class LinearAlgebraTest {
             assertTrue(pvUnique.toString().contains("Basis: None"));
         }
     }
+
+    @Nested
+    class QRDecompositionTests {
+
+        @Test
+        void testStandardReconstruction() {
+            // A simple 3x2 matrix
+            double[][] data = {
+                    {12, -51},
+                    {6, 167},
+                    {-4, 24}
+            };
+            Matrix A = new Matrix(data);
+            QRDecomposition qr = new QRDecomposition(A);
+
+            Matrix Q = qr.getQ();
+            Matrix R = qr.getR();
+
+            // Property 1: A = Q * R
+            Matrix reconstructed = Q.multiply(R);
+            assertTrue(A.equals(reconstructed), "A should equal Q * R");
+        }
+
+        @Test
+        void testOrthogonalityOfQ() {
+            Matrix A = new Matrix(new double[][]{{1, 2}, {3, 4}, {5, 6}});
+            QRDecomposition qr = new QRDecomposition(A);
+            Matrix Q = qr.getQ();
+
+            // Property 2: Q^T * Q = I
+            Matrix QTQ = Q.transpose().multiply(Q);
+
+            // Create Identity Matrix for comparison
+            double[][] identity = new double[Q.columns()][Q.columns()];
+            for(int i = 0; i < Q.columns(); i++) identity[i][i] = 1.0;
+            Matrix I = new Matrix(identity);
+
+            assertTrue(I.equals(QTQ), "Q transpose * Q should be Identity");
+        }
+
+        @Test
+        void testRIsUpperTriangular() {
+            Matrix A = new Matrix(new double[][]{{1, 2}, {3, 4}, {5, 6}});
+            QRDecomposition qr = new QRDecomposition(A);
+            Matrix R = qr.getR();
+
+            // Property 3: Elements below the diagonal must be 0
+            for (int i = 0; i < R.rows(); i++) {
+                for (int j = 0; j < R.columns(); j++) {
+                    if (i > j) {
+                        assertEquals(0.0, R.get(i, j), DELTA,
+                                "Element at ["+i+"]["+j+"] should be zero");
+                    }
+                }
+            }
+        }
+
+        @Test
+        void testRankAndSingularity() {
+            // Rank-deficient matrix (col 2 is 2*col 1)
+            Matrix rankDeficient = new Matrix(new double[][]{
+                    {1, 2},
+                    {2, 4},
+                    {3, 6}
+            });
+            QRDecomposition qr = new QRDecomposition(rankDeficient);
+
+            assertEquals(1, qr.getRank(), "Rank should be 1");
+            assertFalse(qr.getRank() == 2);
+        }
+
+        @Test
+        void testDeterminant() {
+            // For a square matrix, |A| = |Q| * |R|
+            // Since |Q| is 1 or -1 (orthogonal), |A| = ±Product of R's diagonal
+            Matrix A = new Matrix(new double[][]{{1, 2}, {3, 4}});
+            QRDecomposition qr = new QRDecomposition(A);
+
+            // True determinant of {{1,2},{3,4}} is (1*4 - 2*3) = -2
+            assertEquals(-2.0, qr.getDeterminant(), DELTA);
+        }
+
+        @Test
+        void testThinAndWideMatrices() {
+            // "Thin" Matrix (Rows > Cols)
+            Matrix thin = new Matrix(new double[5][2]);
+            QRDecomposition qrThin = new QRDecomposition(thin);
+            assertEquals(5, qrThin.getQ().rows());
+            assertEquals(2, qrThin.getR().columns());
+
+            // "Wide" Matrix (Cols > Rows)
+            Matrix wide = new Matrix(new double[][]{{1, 2, 3}, {4, 5, 6}});
+            QRDecomposition qrWide = new QRDecomposition(wide);
+            assertTrue(qrWide.getQ().isSquare());
+            assertEquals(2, qrWide.getQ().rows());
+        }
+    }
+
+    @Nested
+    class RegressionTests {
+
+        @Test
+        void testSimpleLinearRegression() {
+            // y = 2x + 1
+            Vector x = new Vector(1, 2, 3, 4, 5);
+            Vector y = new Vector(3, 5, 7, 9, 11);
+            Regression reg = new Regression(x, y);
+            Regression.RegressionResult result = reg.polynomialRegression(1);
+
+            // Check prediction
+            assertEquals(13.0, result.predict(new Vector(6.0)), DELTA);
+
+            // Check equation coefficients [intercept, slope]
+            Vector eq = result.getEquation();
+            assertEquals(1.0, eq.get(0), DELTA);
+            assertEquals(2.0, eq.get(1), DELTA);
+        }
+
+        @Test
+        void testMultivariateQuadraticRegression() {
+            // z = 1 + x + y + x^2 + xy + y^2
+            // Points: (0,0,1), (1,0,3), (0,1,3), (1,1,6)
+            Matrix features = new Matrix(new double[][]{
+                    {0, 0}, {1, 0}, {0, 1}, {1, 1}, {2, 0}
+            });
+            Vector targets = new Vector(1, 3, 3, 6, 7); // y = 1 + x + y + x^2
+
+            Regression reg = new Regression(features, targets);
+            Regression.RegressionResult result = reg.polynomialRegression(2);
+
+            // Test a point not in the training set
+            // If x=2, y=2 -> 1 + 2 + 2 + 4 + 4 + 4 = 17 (if all coeffs were 1)
+            double prediction = result.predict(new Vector(2, 1));
+            assertTrue(prediction > 0);
+            assertEquals(result.getDegree(), 2);
+        }
+
+        @Test
+        void testExponentialRegression() {
+            // y = 2 * e^(0.5x) -> linearized as ln(y) = ln(2) + 0.5x
+            Vector x = new Vector(0, 1, 2);
+            Vector y = new Vector(2.0, 2.0 * Math.exp(0.5), 2.0 * Math.exp(1.0));
+
+            Regression reg = new Regression(x, y);
+            Regression.RegressionResult result = reg.exponentialPolynomialRegression(1);
+
+            // The unwarped equation should return the base coefficients
+            Vector eq = result.getEquation();
+            assertEquals(2.0, eq.get(0), DELTA); // a
+
+            // Predict should return to the original scale
+            assertEquals(2.0 * Math.exp(1.5), result.predict(new Vector(3.0)), DELTA);
+        }
+
+        @Test
+        void testPowerRegressionDomainFailure() {
+            Vector x = new Vector(-1, 2, 3); // Negative X
+            Vector y = new Vector(1, 4, 9);
+            Regression reg = new Regression(x, y);
+
+            Regression.RegressionResult result = reg.powerPolynomialRegression(2);
+
+            // Predicting with a negative number in a log-scale model should return NaN
+            assertTrue(Double.isNaN(result.predict(new Vector(-5.0))));
+        }
+
+        @Test
+        void testLogarithmicRegression() {
+            // y = 5 + 2ln(x)
+            Vector x = new Vector(1, Math.E, Math.E * Math.E);
+            Vector y = new Vector(5, 7, 9);
+
+            Regression reg = new Regression(x, y);
+            Regression.RegressionResult result = reg.logarithmicPolynomialRegression(1);
+
+            assertEquals(11.0, result.predict(new Vector(Math.pow(Math.E, 3))), DELTA);
+        }
+
+        @Test
+        void testResidualsSize() {
+            Vector x = new Vector(1, 2, 3);
+            Vector y = new Vector(2, 4, 5);
+            Regression reg = new Regression(x, y);
+            Regression.RegressionResult result = reg.polynomialRegression(1);
+
+            assertEquals(3, result.getResiduals().size());
+        }
+    }
+
+    @Nested
+    class MatrixVectorIntegrationTests {
+        @Test
+        void testQRToRegressionFlow() {
+            // Ensure QR Decomposition handles the Design Matrix correctly
+            double[][] data = {{1, 1}, {1, 2}, {1, 3}};
+            Matrix m = new Matrix(data);
+            QRDecomposition qr = new QRDecomposition(m);
+
+            assertEquals(2, qr.getRank());
+            assertTrue(qr.getRank() == 2);
+        }
+    }
+
+    // ===================================================================================
+    // EXTENDED QR DECOMPOSITION TESTS
+    // ===================================================================================
+    @Nested
+    class ExtendedQRDecompositionTests {
+
+        @Test
+        void testIdentityMatrix() {
+            Matrix I = Matrix.identity(4);
+            I.multiplyInPlace(-1);
+            QRDecomposition qr = new QRDecomposition(I);
+
+            assertTrue(I.equals(qr.getQ().multiply(qr.getR())), "Q*R of Identity should be Identity");
+            assertEquals(1.0, qr.getDeterminant(), DELTA);
+            assertEquals(4, qr.getRank());
+        }
+
+        @Test
+        void testNegativeDeterminant() {
+            // Swapping two rows of the identity matrix flips the determinant to -1
+            Matrix m = new Matrix(new double[][]{
+                    {0, 1, 0},
+                    {1, 0, 0},
+                    {0, 0, 1}
+            });
+            QRDecomposition qr = new QRDecomposition(m);
+
+            assertEquals(-1.0, qr.getDeterminant(), DELTA);
+        }
+
+        @Test
+        void testRankDeficientMatrix() {
+            // 3x3 matrix where Row 3 is Row 1 + Row 2
+            Matrix m = new Matrix(new double[][]{
+                    {1, 2, 3},
+                    {4, 5, 6},
+                    {5, 7, 9}
+            });
+            QRDecomposition qr = new QRDecomposition(m);
+
+            assertEquals(2, qr.getRank(), "Rank should be 2 due to linear dependence");
+            assertTrue(qr.isSingular());
+            assertEquals(0.0, qr.getDeterminant(), DELTA);
+        }
+    }
+
+    // ===================================================================================
+    // EXTENDED REGRESSION TESTS
+    // ===================================================================================
+    @Nested
+    class ExtendedRegressionTests {
+
+        @Test
+        void testZeroDegreeRegression() {
+            // A degree 0 polynomial regression should return the average of the Y values
+            Vector x = new Vector(1, 2, 3, 4, 5);
+            Vector y = new Vector(2, 4, 4, 4, 6); // Average is 4.0
+
+            Regression reg = new Regression(x, y);
+            Regression.RegressionResult result = reg.polynomialRegression(0);
+
+            Vector eq = result.getEquation();
+            assertEquals(1, eq.size());
+            assertEquals(4.0, eq.get(0), DELTA);
+            assertEquals(4.0, result.predict(new Vector(99.0)), DELTA);
+        }
+
+        @Test
+        void testUnderdeterminedSystemGracefulDegradation() {
+            // We have 2 data points but are asking for a degree 2 fit (requires 3 points: 1, x, x^2)
+            // The solver should set the x^2 coefficient to 0 and fit a line.
+            Vector x = new Vector(1, 2);
+            Vector y = new Vector(2, 4);
+
+            Regression reg = new Regression(x, y);
+            Regression.RegressionResult result = reg.polynomialRegression(2);
+
+            Vector eq = result.getEquation();
+            assertEquals(3, eq.size()); // [intercept, x, x^2]
+            assertEquals(0.0, eq.get(0), DELTA); // intercept = 0
+            assertEquals(2.0, eq.get(1), DELTA); // slope = 2
+            assertEquals(0.0, eq.get(2), DELTA); // x^2 term is collapsed to 0 due to i >= design.rows check
+        }
+
+        @Test
+        void testMultivariatePowerRegression() {
+            // z = 2 * (x^2) * (y^3)
+            // Linearized: ln(z) = ln(2) + 2*ln(x) + 3*ln(y)
+            Matrix features = new Matrix(new double[][] {
+                    {1, 1},
+                    {2, 1},
+                    {1, 2},
+                    {2, 2},
+                    {3, 2}
+            });
+            Vector targets = new Vector(
+                    2 * 1 * 1,
+                    2 * 4 * 1,
+                    2 * 1 * 8,
+                    2 * 4 * 8,
+                    2 * 9 * 8
+            );
+
+            Regression reg = new Regression(features, targets);
+            Regression.RegressionResult result = reg.powerPolynomialRegression(1); // Degree 1 in log-space
+
+            Vector eq = result.getEquation();
+            // Equation structure for 2 vars, degree 1: [intercept, x_pow, y_pow]
+            assertEquals(2.0, eq.get(0), DELTA); // Intercept is unwarped via Math.exp()
+            assertEquals(2.0, eq.get(1), DELTA); // x power remains untouched
+            assertEquals(3.0, eq.get(2), DELTA); // y power remains untouched
+
+            double prediction = result.predict(new Vector(3, 3)); // 2 * 9 * 27 = 486
+            assertEquals(486.0, prediction, DELTA);
+        }
+    }
 }
