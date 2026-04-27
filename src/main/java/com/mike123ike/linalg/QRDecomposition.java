@@ -136,6 +136,6 @@ public class QRDecomposition implements Decomposition {
     }
 
     public String toString() {
-        return String.format("QR Decomposition:\nQ Matrix:\n%s\nR Matrix:\n%s", R.rows, R.cols, Q.toString(), R.toString());
+        return String.format("QR Decomposition:\nQ Matrix:\n%s\nR Matrix:\n%s", Q.toString(), R.toString());
     }
 }
